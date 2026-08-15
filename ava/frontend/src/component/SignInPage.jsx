@@ -1,7 +1,8 @@
-import { SignedOut, SignIn } from '@clerk/clerk-react';
+import { SignIn } from '@clerk/clerk-react';
 import React from 'react';
 import { Typewriter } from 'react-simple-typewriter';
 import ManobalAI_Logo from '../pictures/ManobalAI.png';
+import { SignedOut } from '../auth';
 
 export default function SignInPage() {
     return (

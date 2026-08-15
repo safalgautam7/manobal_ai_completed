@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '../auth';
 import { Link } from "react-router-dom";
 
 function Name() {

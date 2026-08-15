@@ -1,0 +1,31 @@
+# Runtime
+fastapi==0.115.4
+uvicorn==0.32.0
+pydantic==2.9.2
+python-dotenv
+PyJWT
+cryptography
+httpx
+aiofiles
+
+# RAG / LLM
+langchain==0.3.7
+langchain-community==0.3.5
+langchain-groq==0.2.1
+groq==0.11.0
+langchain-huggingface==0.1.2
+langchain-ollama
+sentence-transformers
+faiss-cpu
+docarray
+numpy<2.0
+scipy<1.15
+
+# Emotion analysis
+transformers
+torch
+matplotlib
+
+# Dev / test
+pytest
+pytest-cov

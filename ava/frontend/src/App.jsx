@@ -1,40 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Message from './component/Message';
-import UserName from './component/UserName';
-import { useUser } from '@clerk/clerk-react';
-import ManobalAILogo from './pictures/ManobalAI.svg'
-import ManobalAI_Logo from './pictures/ManobalAI.png'
 import { Link } from "react-router-dom";
 import { GoGraph } from "react-icons/go";
-import GraphPage from './component/GraphPage';
 import Test from './component/Test';
-
-
-
+import { sendPrompt } from './api';
+import { useUser } from './auth';
 
 function App() {
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Manage visibility of the floating menu
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { isSignedIn, user } = useUser();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showHistory, setShowHistory] = useState(false); // State to toggle history view
+  const [showHistory, setShowHistory] = useState(false);
   const chatBoxRef = useRef(null);
 
+  const firstName = user?.firstName || 'there';
 
-  const firstName = user.firstName;
-  const lastName = user.lastName;
-  const fullName = `${firstName} ${lastName}`.trim();
-
-
-  // Toggle the menu visibility
-  const toggleMenu = (e) => {
-    e.stopPropagation(); // Prevent triggering other click events
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  // Handle the submit action for sending a message
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -45,34 +28,15 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/prompt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: input }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const botMessage = {
-          text: data.response.replace(/\n/g, '<br/>'),
-          sender: 'bot',
-          allResponses: data.all_responses,
-        };
-        setMessages((prev) => [...prev, botMessage]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { text: `Sorry ${firstName}, I couldn't process your request.`, sender: 'bot' },
-        ]);
-      }
+      const { data } = await sendPrompt(input, sessionId);
+      setSessionId(data.session_id);
+      const botMessage = { text: data.response, sender: 'bot' };
+      setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error('Error:', error);
       setMessages((prev) => [
         ...prev,
-        { text: `Sorry ${firstName}, I couldn't reach the server.`, sender: 'bot' },
+        { text: `Sorry ${firstName}, I couldn't process your request.`, sender: 'bot' },
       ]);
     }
 
@@ -86,12 +50,10 @@ function App() {
     }
   }, [messages]);
 
-  // Toggle history visibility
   const toggleHistory = () => {
     setShowHistory(!showHistory);
   };
 
-  // Scroll to a specific message when clicked
   const scrollToMessage = (index) => {
     const messageElement = document.getElementById(`message-${index}`);
     if (messageElement) {
@@ -99,12 +61,11 @@ function App() {
     }
   };
 
-  // Function to download the bot message as a .txt file
   const downloadFile = (text) => {
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `bot_response_of_${fullName}.txt`; // The file name will be 'reply.txt'
+    link.download = 'bot_response.txt';
     link.click();
   };
 
@@ -112,14 +73,14 @@ function App() {
     <div className="flex h-screen bg-gray-900 text-gray-200">
       {/* History Box */}
       {showHistory && (
-        <div className="w-1/4 bg-gray-800-800 text-gray-300 shadow-inner p-4 space-y-2 overflow-y-auto">
+        <div className="w-1/4 bg-gray-800 text-gray-300 shadow-inner p-4 space-y-2 overflow-y-auto">
           <h2 className="text-lg font-semibold text-blue-500">History</h2>
           {messages.filter(message => message.sender === 'user').map((message, index) => (
             <div
               key={index}
               className={`p-2 rounded-lg cursor-pointer bg-stone-900`}
               title={message.text}
-              onClick={() => scrollToMessage(index)} // Click to scroll to the full message
+              onClick={() => scrollToMessage(index)}
             >
               <p className="truncate">{message.text}</p>
             </div>
@@ -130,30 +91,18 @@ function App() {
       {/* Main Chat Interface */}
       <div className="flex flex-col flex-grow">
         {/* Header */}
-        <div className=" bg-slate-950 text-5xl font-bold text-blue-500 neon-text py-6 cursor-pointer ">
-          {/* Title and Icon */}
+        <div className="bg-slate-950 text-5xl font-bold text-blue-500 neon-text py-6 cursor-pointer">
           <div className="flex ml-4">
-            {/* Title */}
             <h1 onClick={toggleHistory}>ManobalAI</h1>
             <div className='ml-4 hover:mr-2 hover:mt-2 active:size-9'>
-              <Link to={'\Graph'} >
-
-                <GoGraph size={50} className=" border-2   text-cyan-700 rounded-md p-1  border-cyan-400  cursor-pointer  bg-teal-300  " />
-                <p className='text-sm flex text-cyan-700 '>View_Graph</p>
+              <Link to={'\Graph'}>
+                <GoGraph size={50} className="border-2 text-cyan-700 rounded-md p-1 border-cyan-400 cursor-pointer bg-teal-300" />
+                <p className='text-sm flex text-cyan-700'>View_Graph</p>
               </Link>
-
             </div>
           </div>
           <Test />
-
-          {/* User Info */}
-
         </div>
-
-
-
-
-
 
         {/* Chat Box */}
         <div
@@ -193,7 +142,6 @@ function App() {
           )}
         </div>
 
-
         {/* Input Box */}
         {isSignedIn ? (
           <form
@@ -209,7 +157,6 @@ function App() {
             />
             <button
               type="submit"
-              onClick={() => { <GraphPage data={input} /> }}
               className="ml-4 px-6 py-3 bg-cyan-600 text-gray-200 font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:shadow-[0_0_15px_2px_rgba(56,189,248,0.8)] focus:shadow-[0_0_15px_2px_rgba(56,189,248,0.8)] active:scale-95"
             >
               Send

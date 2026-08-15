@@ -1,37 +1,31 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getRandomQuote } from "../api";
 
-const App = () => {
-    const [quote, setQuote] = useState(""); // State to hold the fetched quote
+const Test = () => {
+    const [quote, setQuote] = useState("");
 
-    // Function to fetch a random quote from the API
-    const fetchQuote = async () => {
-        try {
-            const response = await axios.get("http://127.0.0.1:8000/random-quote"); // Replace with your actual API URL
-            setQuote(response.data.quote); // Update state with the fetched quote
-        } catch (error) {
-            console.error("Error fetching quote:", error);
-            setQuote("Sorry, we couldn't fetch a quote. Please try again later."); // Fallback quote
-        }
-    };
-
-    // Fetch a new quote on component mount
     useEffect(() => {
-        fetchQuote();
+        let cancelled = false;
+        getRandomQuote()
+            .then(({ data }) => {
+                if (!cancelled) setQuote(data.quote);
+            })
+            .catch((err) => {
+                console.error("Error fetching quote:", err);
+                if (!cancelled) {
+                    setQuote("Sorry, we couldn't fetch a quote. Please try again later.");
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     return (
-        <div className="flex border-2  justify-between rounded-md p-3 border-cyan-400 ml-8" >
-
-            <p className=" text-sm   text-cyan-700">{quote}</p>
-            {/* <button style={styles.button} onClick={fetchQuote}>
-                Generate New Quote
-            </button> */}
+        <div className="flex border-2 justify-between rounded-md p-3 border-cyan-400 ml-8">
+            <p className="text-sm text-cyan-700">{quote}</p>
         </div>
     );
 };
 
-
-
-
-export default App;
+export default Test;

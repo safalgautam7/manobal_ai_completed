@@ -1,39 +1,22 @@
 import Typewriter from 'typewriter-effect';
 import React, { useEffect, useState } from "react";
+import { toSafeMessageHtml } from "../utils/sanitize";
 
 function Message({ text }) {
-    const [txt, setTxt] = useState(null);
+    const [html, setHtml] = useState("");
     useEffect(() => {
-        const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-        const parts = text.split(urlRegex);
+        setHtml(toSafeMessageHtml(text));
+    }, [text]);
 
-        const out = parts.reduce(
-            (acc, cur) =>
-                acc +
-                (urlRegex.test(cur)
-                    ? ` <a
-        
-          href="${cur.startsWith("http") ? cur : "http://" + cur}"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="neon-link"
-        >
-          ${cur}
-        </a>`
-                    : cur)
-        );
-        setTxt(out);
-    }, []);
     return (
         <>
-            {txt && (
+            {html && (
                 <div>
                     <Typewriter
-
                         onInit={(typewriter) => {
                             typewriter
                                 .changeDelay(0.4)
-                                .typeString(txt)
+                                .typeString(html)
                                 .start()
                                 .callFunction((s) => {
                                     s.elements.cursor.style.display = "none";

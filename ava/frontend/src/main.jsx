@@ -1,32 +1,27 @@
 import ReactDOM from 'react-dom/client';
 import './main.css';
 import App from './App';
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import {
     createBrowserRouter,
     RouterProvider,
 } from "react-router-dom";
 
-import { SignedIn, SignedOut, SignIn, SignInButton, UserButton } from "@clerk/clerk-react";
-import { ClerkProvider } from '@clerk/clerk-react'
+import { UserProfile } from "@clerk/clerk-react";
 import SignInPage from './component/SignInPage';
 import './App.css';
-import { UserProfile } from "@clerk/clerk-react";
 import ErrorPage from './component/ErrorPage';
-import GraphPage from './component/GraphPage'
-import Test from './component/Test'
 import UserName from './component/UserName'
+import { AuthProvider, SignedIn, UserButton, isAuthDisabled } from './auth'
 
-
-
+const GraphPage = lazy(() => import('./component/GraphPage'));
 
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
-if (!PUBLISHABLE_KEY) {
+if (!isAuthDisabled() && !PUBLISHABLE_KEY) {
     throw new Error("Missing Publishable Key")
 }
-
 
 
 
@@ -46,7 +41,7 @@ const router = createBrowserRouter([
                         <UserButton
                             appearance={{
                                 elements: {
-                                    userButtonAvatarBox: "w-10 h-10 rounded-50 ml-9", // Customizes the avatar
+                                    userButtonAvatarBox: "w-10 h-10 rounded-50 ml-9",
                                 },
                             }}
                         />
@@ -60,21 +55,19 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/profile", // New route for the profile page
-        element: (
+        path: "/profile",
+        element: isAuthDisabled() ? (
+            <div className="flex h-screen flex-col items-center justify-center bg-gray-100 text-gray-500">
+                Profile requires Clerk authentication (disabled in local dev mode).
+            </div>
+        ) : (
             <SignedIn>
                 <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
                     <UserProfile
                         appearance={{
-                            elements: {
-                                // pageScrollBox: "bg-orange-950"
-                            },
-
+                            elements: {},
                         }}
-
                     />
-
-
                 </div>
             </SignedIn>
         ),
@@ -82,21 +75,18 @@ const router = createBrowserRouter([
     {
         path: "/Graph",
         element: (
-            <GraphPage />
-
-
+            <Suspense fallback={<div className="h-screen flex items-center justify-center bg-gray-800 text-gray-200">Loading...</div>}>
+                <GraphPage />
+            </Suspense>
         ),
     },
-
-
 ]);
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-        <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+        <AuthProvider publishableKey={PUBLISHABLE_KEY}>
             <RouterProvider router={router} />
-        </ClerkProvider>
-
+        </AuthProvider>
     </React.StrictMode>,
 );

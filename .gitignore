@@ -23,5 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 
-
 .venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets & local configuration
+.env
+*.pem
+
+# Runtime data (database, vector index, generated artifacts)
+*.db
+*.db-wal
+*.db-shm
+**/data/vector_store/

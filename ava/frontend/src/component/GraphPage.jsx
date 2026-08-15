@@ -1,50 +1,42 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { analyzeEmotion, getEmotionGraph } from "../api";
 
-const Graph = ({ data }) => {
+const MAX_BAR_WIDTH = 100;
+
+const Graph = () => {
     const [userInput, setUserInput] = useState("");
     const [emotionResult, setEmotionResult] = useState(null);
     const [error, setError] = useState("");
-    const [graphUrl, setGraphUrl] = useState("");
+    const [graphData, setGraphData] = useState(null);
 
-    // Handle input change
-    const handleChange = () => {
-        setUserInput(data);
-    };
-
-    // Handle form submission for emotion detection
     const handleSubmit = async (e) => {
-        handleChange();
         e.preventDefault();
+        if (!userInput.trim()) {
+            setError("Please enter some text to analyze.");
+            return;
+        }
         setError("");
         setEmotionResult(null);
-        console.log("userin: ", userInput);
         try {
-            const response = await axios.post("http://127.0.0.1:8000/analyze-emotion", {
-                text: userInput,
-            });
-            setEmotionResult(response.data);
-            setUserInput(""); // Clear input field
+            const { data } = await analyzeEmotion(userInput);
+            setEmotionResult(data);
+            setUserInput("");
         } catch (err) {
-            setError("An error occurred while analyzing the emotion.");
             console.error(err);
+            setError("An error occurred while analyzing the emotion.");
         }
     };
 
-    // Handle graph generation
     const generateGraph = async () => {
         setError("");
-        setGraphUrl("");
+        setGraphData(null);
         try {
-            const response = await axios.get("http://127.0.0.1:8000/generate-graph", {
-                responseType: "blob",
-            });
-            // Convert Blob to a URL for display
-            const url = URL.createObjectURL(new Blob([response.data]));
-            setGraphUrl(url);
+            const { data } = await getEmotionGraph();
+            const max = Math.max(...Object.values(data), 1);
+            setGraphData({ counts: data, max });
         } catch (err) {
-            setError("An error occurred while generating the graph.");
             console.error(err);
+            setError("An error occurred while loading the emotion graph.");
         }
     };
 
@@ -59,29 +51,44 @@ const Graph = ({ data }) => {
                     Back
                 </button>
 
-                {/* Analyze Emotion Button */}
-                <button
-                    onClick={handleSubmit}
-                    className="px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400 focus:ring-2 focus:ring-cyan-500"
-                >
-                    Analyze Emotion
-                </button>
+                {/* Analyze Emotion Form */}
+                <form onSubmit={handleSubmit} className="w-full max-w-md">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Type something to analyze..."
+                            value={userInput}
+                            onChange={(e) => setUserInput(e.target.value)}
+                            className="flex-grow bg-gray-700 text-gray-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <button
+                            type="submit"
+                            className="px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400 focus:ring-2 focus:ring-cyan-500"
+                        >
+                            Analyze
+                        </button>
+                    </div>
+                </form>
 
                 {/* Emotion Result */}
                 {emotionResult && (
                     <div className="mt-6 bg-gray-700 p-4 rounded-lg shadow-md w-full max-w-md">
                         <h3 className="text-lg font-bold text-cyan-400">Detected Emotion</h3>
-                        <p className="mt-2 text-lg">Emotion: <span className="font-semibold">{emotionResult.emotion}</span></p>
-                        <p className="mt-1">Confidence Score: <span className="font-mono">{emotionResult.score.toFixed(4)}</span></p>
+                        <p className="mt-2 text-lg">
+                            Emotion: <span className="font-semibold">{emotionResult.emotion}</span>
+                        </p>
+                        <p className="mt-1">
+                            Confidence Score:{" "}
+                            <span className="font-mono">{Number(emotionResult.score).toFixed(4)}</span>
+                        </p>
+                        {emotionResult.suggestion && (
+                            <p className="mt-3 text-sm text-gray-300">{emotionResult.suggestion}</p>
+                        )}
                     </div>
                 )}
 
                 {/* Error Message */}
-                {error && (
-                    <p className="mt-4 text-red-500 font-semibold">
-                        {error}
-                    </p>
-                )}
+                {error && <p className="mt-4 text-red-500 font-semibold">{error}</p>}
 
                 {/* Generate Graph Button */}
                 <button
@@ -92,15 +99,27 @@ const Graph = ({ data }) => {
                 </button>
 
                 {/* Display Graph */}
-                {graphUrl && (
-                    <div className="mt-6 bg-gray-700 p-4 rounded-lg shadow-md w-full">
+                {graphData && (
+                    <div className="mt-6 bg-gray-700 p-4 rounded-lg shadow-md w-full max-w-2xl">
                         <h3 className="text-xl font-bold text-indigo-400">Emotion Graph</h3>
-                        <div className="flex items-center justify-center">
-                            <img
-                                src={graphUrl}
-                                alt="Emotion Graph"
-                                className="mt-4 rounded-lg border-2 border-cyan-500"
-                            />
+                        <div className="mt-4 space-y-3">
+                            {Object.entries(graphData.counts).map(([emotion, count]) => (
+                                <div key={emotion} className="flex items-center gap-3">
+                                    <span className="w-28 text-sm capitalize">{emotion}</span>
+                                    <div className="flex-grow bg-gray-900 rounded h-6 overflow-hidden">
+                                        <div
+                                            className="h-full bg-cyan-500"
+                                            style={{
+                                                width: `${Math.max(
+                                                    (count / graphData.max) * MAX_BAR_WIDTH,
+                                                    4
+                                                )}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="w-8 text-right text-sm">{count}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
